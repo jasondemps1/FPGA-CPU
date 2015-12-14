@@ -1,0 +1,31 @@
+library ieee;
+use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+
+entity Interceptor is
+  port(
+    addr     : in  unsigned(10 downto 2);
+    data     : in  unsigned(31 downto 0);
+    data_out : out unsigned(31 downto 0)
+    );
+end Interceptor;
+
+architecture Interceptor of Interceptor is
+  --type addr_t is array(natural range <>) of std_logic_vector;
+
+  --signal addr_lookup : addr_t := "010";
+  signal data_tmp : unsigned(31 downto 0);
+begin
+
+data_out <= data_tmp;
+
+  process(data)
+
+  begin
+    if addr = "00000010" then
+		data_tmp <= data;
+	 end if;
+
+  end process;
+
+end Interceptor;

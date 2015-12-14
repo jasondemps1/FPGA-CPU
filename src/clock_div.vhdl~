@@ -1,0 +1,19 @@
+library ieee;
+use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+
+entity clock_div is
+  generic (N : natural);
+  port(
+    clk_in  : in  std_logic;
+    clk_out : out std_logic
+    );
+end clock_div;
+
+
+architecture clock_div of clock_div is
+
+begin
+
+
+end clock_div;

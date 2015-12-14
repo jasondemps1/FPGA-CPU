@@ -1,0 +1,27 @@
+library ieee;
+use ieee.numeric_std.all;
+use ieee.std_logic_1164.all;
+
+entity clock_div is
+  generic (N : natural);
+  port(
+    clk_in  : in  std_logic;
+    clk_out : out std_logic
+    );
+end clock_div;
+
+
+architecture clock_div of clock_div is
+  signal div_arr : std_logic_vector(N-1 downto 0);
+begin
+  clk_out <= div_arr(div_arr'high);
+
+  process(clk_in)
+  begin
+    if rising_edge(clk_in) then
+      div_arr <= div_arr lsl 1;
+    end if;
+
+  end process;
+
+end clock_div;
