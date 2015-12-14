@@ -1,6 +1,7 @@
 ### Emacs ###
 # -*- mode: gitignore; -*-
 *~
+~.[bak]
 \#*\#
 /.emacs.desktop
 /.emacs.desktop.lock
