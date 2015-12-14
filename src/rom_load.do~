@@ -1,6 +1,0 @@
-
-
-when "/top/reset == '0'" {
-    echo "Loading ROM..."
-    mem load -i rom_init.mem /top/prog_mem/rom   
-}
