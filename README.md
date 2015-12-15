@@ -6,6 +6,18 @@ Block Diagram
 -------------
 <img src="http://jdemps.com/wp-content/uploads/2015/12/cpu-bd.png">
 
+** Explanation **
+### Fetch ###
+* Program Counter (PC) is updated with current branch value.
+* Instruction Memory (ROM) reads PC value and outputs new opcode.
+
+### Decode ###
+* 
+
+### Execute ###
+
+### Store ###
+
 Description
 -----------
 *IN PROGRESS*
