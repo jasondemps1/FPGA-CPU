@@ -26,6 +26,7 @@ Block Diagram
 * Returns to Fetch stage.
 
 *** Stalling ***
+
 A Stall will occur if a Load (LDR) opcode is read. This is necessary to guarantee the registers are loaded with the correct memory before the next instruction performed.
 
 Description
