@@ -25,7 +25,7 @@ Block Diagram
 * RAM performs write into Register File.
 * Returns to Fetch stage.
 
-*** Stalling ***
+## Stalling ##
 
 A Stall will occur if a Load (LDR) opcode is read. This is necessary to guarantee the registers are loaded with the correct memory before the next instruction performed.
 
