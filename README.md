@@ -42,5 +42,4 @@ Description
 Going Forward
 -------------
 * Finish instruction set implementation.
-* 
 * Mitigate Stalls by recording necessary data from Load instruction, and feed to requesting instruction.
