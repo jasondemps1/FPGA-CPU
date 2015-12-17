@@ -11,8 +11,8 @@ Block Diagram
 * Instruction Memory (ROM) reads PC value and outputs new opcode.
 
 ### Decode ###
-* Decoder interprets ROM Opcode.
-* Decoder .
+* Interprets ROM Opcode.
+* Determines which registers must be read from.
 * Stalls pipeline if necessary.
 
 ### Execute ###
