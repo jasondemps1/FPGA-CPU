@@ -1,6 +1,6 @@
-Pipelined CPU w/ ARM Thumb-2 Instruction Set
+Pipelined CPU w/ ARM Thumb Instruction Set
 =======================================
-A 4-stage pipeline, Harvard architecture, Thumb-2 CPU implemented on an Altera DE1 FPGA.
+A 4-stage pipeline, Harvard architecture, Thumb CPU implemented on an Altera DE1 FPGA.
 
 Block Diagram
 -------------
@@ -34,7 +34,7 @@ Description
 *IN PROGRESS*
 
 * Harvard Architecture.
-* Implements ARM Thumb-2 (16-bit) instruction set.
+* Implements ARM Thumb (16-bit) instruction set.
 
 * 1024, 16-bit, ROM locations.
 * 512, 32-bit, RAM locations.
