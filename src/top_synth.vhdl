@@ -6,6 +6,7 @@ use ieee.std_logic_1164.all;
 --      * LDM/STM
 --      * Test UART
 --      * if-then-else
+--      * Finish Branches
 
 entity top_synth is
   port(
@@ -88,12 +89,19 @@ architecture top_synth of top_synth is
       clk_out : buffer std_logic
       );
   end component;
-  component UART_Control is
-    generic (WORD_SZ : natural);
+  component UART is
+    generic(
+      FIFO_SZ : natural;
+      WORD_SZ : natural
+      );
     port(
-      clock    : in  std_logic;
-      word     : in  unsigned(WORD_SZ-1 downto 0);
-      data_out : out std_logic_vector(7 downto 0)
+      clock     : in     std_logic;
+      bit_recv  : in     std_logic;
+      byte_recv : buffer std_logic_vector(7 downto 0);
+      bit_send  : out    std_logic;
+      word_send : out    std_logic_vector(WORD_SZ-1 downto 0);
+      transmit  : in     std_logic;
+      recv      : out    std_logic;
       );
   end component;
 
@@ -127,6 +135,10 @@ architecture top_synth of top_synth is
 
 -- Hex outs
   signal HexOut0, HexOut1, HexOut2, HexOut3 : std_logic_vector(0 to 6);
+
+  -- UART crap
+  signal uart_recv : std_logic_vector(7 downto 0);
+
 
 begin
   HEX3 <= HexOut3;
@@ -171,6 +183,7 @@ begin
   hex2_comp : HexDecoder port map(std_logic_vector(intercept_out(11 downto 8)), HexOut2);
   hex3_comp : HexDecoder port map(std_logic_vector(intercept_out(15 downto 12)), HexOut3);
 
-  UART : UART_Control generic map(32) port map(CLOCK_50, dm_data_out, GPIO_0(0));
+  -- Make a UART component (32-byte FIFO, 32-bit Word size)
+  uart_comp : UART generic map(32, 32) port map(CLOCK_50, GPIO_0(0), uart_recv, intercept_out);
 
 end top_synth;

@@ -55,13 +55,14 @@ package instr_set is
     );
 
   procedure hi_reg_bx(
-    instr          :     unsigned(15 downto 0);
-    flags          :     flags_bv;
-    rdata1, rdata2 :     unsigned(31 downto 0);
-    wadr           : out unsigned(3 downto 0);
-    wdata          : out unsigned(31 downto 0);
-    wr_reg         : out std_logic;
-    flags_out      : out flags_bv
+    instr          :       unsigned(15 downto 0);
+    flags          :       flags_bv;
+    rdata1, rdata2 :       unsigned(31 downto 0);
+    pc             : inout unsigned(31 downto 1);
+    wadr           : out   unsigned(3 downto 0);
+    wdata          : out   unsigned(31 downto 0);
+    wr_reg         : out   std_logic;
+    flags_out      : out   flags_bv
     );
 
   procedure pc_rel_load(
@@ -191,6 +192,19 @@ package body instr_set is
     return take_branch;
 
   end branch;
+
+  --procedure branc_exec(
+  --  instr       :     unsigned(15 downto 0);
+  --  flags       :     flags_bv;
+  --  pc          : out unsigned(31 downto 1);
+  --  take_branch : out boolean;
+  --  ) is
+
+  --  variable branch_val : unsigned(3 downto 0) := instr(6 downto 3);
+  --begin
+  --  pc := branch_val;
+  --  branch(branch_val, flags);
+  --end branch_exec;
 
   function comp_branch(
     instr  : unsigned(15 downto 0);
@@ -575,13 +589,14 @@ package body instr_set is
   end offset_sp_sign;
 
   procedure hi_reg_bx(
-    instr          :     unsigned(15 downto 0);
-    flags          :     flags_bv;
-    rdata1, rdata2 :     unsigned(31 downto 0);
-    wadr           : out unsigned(3 downto 0);
-    wdata          : out unsigned(31 downto 0);
-    wr_reg         : out std_logic;
-    flags_out      : out flags_bv
+    instr          :       unsigned(15 downto 0);
+    flags          :       flags_bv;
+    rdata1, rdata2 :       unsigned(31 downto 0);
+    pc             : inout unsigned(31 downto 1);
+    wadr           : out   unsigned(3 downto 0);
+    wdata          : out   unsigned(31 downto 0);
+    wr_reg         : out   std_logic;
+    flags_out      : out   flags_bv
     ) is
 
     variable flags_mask : flags_bv := "1111";
@@ -595,7 +610,8 @@ package body instr_set is
       when "01" =>                      -- CMP
         flags_out := flags_set(resize(rdata1 - rdata2, 33), flags_mask);
       when "11" =>                      -- BX
-
+        pc := rdata1;                   -- TODO: Add take_branch here
+        branch(instr, flags_out);
       when others =>
         report "Invalid condition code in High Register instruction" severity error;
     end case;
