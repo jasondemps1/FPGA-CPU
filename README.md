@@ -11,8 +11,8 @@ Block Diagram
 * Instruction Memory (ROM) reads PC value and outputs new opcode.
 
 ### Decode ###
-* Decoder interprets ROM Opcode.
-* Decoder .
+* Interprets ROM Opcode.
+* Determines which registers must be read from.
 * Stalls pipeline if necessary.
 
 ### Execute ###
@@ -25,7 +25,8 @@ Block Diagram
 * RAM performs write into Register File.
 * Returns to Fetch stage.
 
-*** Stalling ***
+## Stalling ##
+
 A Stall will occur if a Load (LDR) opcode is read. This is necessary to guarantee the registers are loaded with the correct memory before the next instruction performed.
 
 Description
@@ -41,5 +42,4 @@ Description
 Going Forward
 -------------
 * Finish instruction set implementation.
-* 
 * Mitigate Stalls by recording necessary data from Load instruction, and feed to requesting instruction.
