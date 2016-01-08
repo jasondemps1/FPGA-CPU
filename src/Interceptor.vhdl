@@ -22,8 +22,9 @@ architecture Interceptor of Interceptor is
   constant N : natural := lookup_tbl'left;
 begin
 
-  process (addr, data)
+  process (clock)--addr, data)
   begin
+  if rising_edge(clock) then
     for i in 1 to N loop
       -- Traverse lookup array and try to match an address. If we do, output
       -- it. *First Match*
@@ -31,6 +32,7 @@ begin
         data_out <= data;
       end if;
     end loop;
+	 end if;
   end process;
   --  if addr = 3 then
   --    data_out <= data;

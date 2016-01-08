@@ -10,7 +10,7 @@ entity Fetch is
     branch_value : in     signed(11 downto 1);
     stall        : in     std_logic;
     im_addr      : buffer unsigned(31 downto 1);
-    pc           : buffer    unsigned(31 downto 1) := (others => '0')
+    pc           : buffer unsigned(31 downto 1) := (others => '0')
     );
 end Fetch;
 

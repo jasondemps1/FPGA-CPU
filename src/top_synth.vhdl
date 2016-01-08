@@ -2,6 +2,8 @@ library ieee;
 use ieee.numeric_std.all;
 use ieee.std_logic_1164.all;
 
+use work.helpers.all;
+
 -- TODO:
 --      * LDM/STM
 --      * Test UART
@@ -70,10 +72,10 @@ architecture top_synth of top_synth is
       );
   end component HexDecoder;
   component Interceptor is
-    generic(
-      N          : natural;
-      lookup_tbl : lookup_t(N-1 downto 0)
-      );
+      generic (
+--    N          : natural;
+    lookup_tbl : lookup_t
+    );
     port(
       addr     : in  unsigned(10 downto 2);
       data     : in  unsigned(31 downto 0);
@@ -89,6 +91,13 @@ architecture top_synth of top_synth is
       clk_out : buffer std_logic
       );
   end component;
+  component clock_gate is
+  port (
+    clk_in  : in std_logic;
+	 clk_en  : in std_logic;
+    clk_out : out std_logic
+    );
+end component;
   component UART is
     generic(
       FIFO_SZ : natural;
@@ -101,7 +110,7 @@ architecture top_synth of top_synth is
       bit_send  : out    std_logic;
       word_send : out    std_logic_vector(WORD_SZ-1 downto 0);
       transmit  : in     std_logic;
-      recv      : out    std_logic;
+      recv      : out    std_logic
       );
   end component;
 
@@ -115,7 +124,8 @@ architecture top_synth of top_synth is
   signal radr1, radr1_tmp, radr2, radr3, wadr : unsigned(3 downto 0);
   signal wdata, rdata1, rdata2, rdata3        : unsigned(31 downto 0);
   signal rf_wr                                : std_logic;
-  signal clock, clock_tmp                     : std_logic := '1';
+  signal clock, clock_tmp       					 : std_logic := '1';
+  signal clock_gated : std_logic;
   signal branch_value                         : signed(11 downto 1);
 
   signal transmit : std_logic := '0';
@@ -127,9 +137,7 @@ architecture top_synth of top_synth is
   signal intercept_out : unsigned(31 downto 0);
 
   constant div_amt : natural := 5000000;
-  constant addr_lookup : lookup_t := (  -- TODO: Trying to initialize a constant 2d array..
-    3, others => '0'
-    );
+  constant addr_lookup : lookup_t(0 to 2) := (3, 0, 0);
 
   signal halt : std_logic;
 
@@ -146,11 +154,13 @@ begin
   HEX1 <= HexOut1;
   HEX0 <= HexOut0;
 
+  clk_gate : clock_gate port map(CLOCK_50, KEY(0), clock_gated);
+  
   cpu_pipeline : Pipeline port map(clock, im_instr, im_addr, dm_data_rd, dm_addr, dm_data_wr, dm_we, radr1_tmp, radr2, radr3, wadr, wdata, rdata1, rdata2, rdata3, rf_wr, pc, branch_value, instr_exec);
 
-  clk_div : clock_div
-    generic map(div_amt)
-    port map(halt, not(KEY(0)), CLOCK_50, clock_tmp);
+--  clk_div : clock_div
+--    generic map(div_amt)
+--    port map(halt, not(KEY(0)), clock_gated, clock_tmp);
 
   --with halt select radr1 <=
   --  unsigned(SW(3 downto 0)) when '1',
@@ -166,9 +176,13 @@ begin
 --    not(KEY(1)) when '1',
 --    clock_tmp   when others;
 
-  with not(KEY(1)) select clock <=
-    clock_tmp when '0',
-    CLOCK_50  when others;
+	clock <= clock_gated;
+
+  --with not(KEY(1)) select clock <=
+  --  clock_gated when '0',
+--	 clock_tmp when others;
+	 --clock_tmp when '0',
+    --clock_gated  when others;
 
   LEDG(7 downto 0) <= std_logic_vector(instr_exec(7 downto 0));
 
@@ -184,6 +198,6 @@ begin
   hex3_comp : HexDecoder port map(std_logic_vector(intercept_out(15 downto 12)), HexOut3);
 
   -- Make a UART component (32-byte FIFO, 32-bit Word size)
-  uart_comp : UART generic map(32, 32) port map(CLOCK_50, GPIO_0(0), uart_recv, intercept_out);
+  --uart_comp : UART generic map(32, 32) port map(clock_gated, GPIO_0(0), uart_recv, intercept_out);
 
 end top_synth;

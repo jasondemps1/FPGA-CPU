@@ -25,6 +25,15 @@ entity Execute is
 end Execute;
 
 architecture Execute of Execute is
+  component comb_mult IS
+	PORT
+	(
+		dataa		: IN STD_LOGIC_VECTOR (31 DOWNTO 0);
+		datab		: IN STD_LOGIC_VECTOR (31 DOWNTO 0);
+		result		: OUT STD_LOGIC_VECTOR (31 DOWNTO 0)
+	);
+  END component;
+  
   signal Ztmp, Ctmp, Vtmp, Ntmp : std_logic;
 
   signal wadr_tmp       : unsigned(3 downto 0);
@@ -34,18 +43,27 @@ architecture Execute of Execute is
   signal dm_data_wr_tmp : unsigned(31 downto 0);
   signal dm_we_tmp      : std_logic;
   signal defer_tmp      : std_logic;
+  
+  signal multa : std_logic_vector(31 downto 0);
+  signal multb : std_logic_vector(31 downto 0);
+  signal multres : std_logic_vector(31 downto 0);
+
+  attribute multstyle            : string;
+  attribute multstyle of Execute : architecture is "dsp";
 begin
 
-  wadr <= wadr_tmp;
+	mult : comb_mult port map (multa, multb, multres);
 
-  wdata <= wdata_tmp;
-  rf_wr <= rf_wr_tmp;
+  --wadr <= wadr_tmp;
 
-  dm_addr    <= dm_addr_tmp;
-  dm_data_wr <= dm_data_wr_tmp;
-  dm_we      <= dm_we_tmp;
+  --wdata <= wdata_tmp;
+  --rf_wr <= rf_wr_tmp;
 
-  defer_load <= defer_tmp;
+  --dm_addr    <= dm_addr_tmp;
+  --dm_data_wr <= dm_data_wr_tmp;
+  --dm_we      <= dm_we_tmp;
+
+  --defer_load <= defer_tmp;
 
   process (instr, rdata1, rdata2, rdata3, pc, Nflag, Zflag, Cflag, Vflag)
     variable condition   : unsigned(3 downto 0);
@@ -65,11 +83,15 @@ begin
 
     variable branch_tmp : signed(10 downto 0);
 
+    --variable pc_lcl : unsigned(31 downto 1);
+
   begin
     --rf_wr        <= '0';
     branch_tmp := "00000000001";
 
     --defer_load <= '0';
+
+    take_branch := false;
 
     Ztmp <= '0';
     Ntmp <= '0';
@@ -83,6 +105,7 @@ begin
     dm_data_wr_lcl := (others => '0');
     dm_we_lcl      := '0';
     defer_lcl      := '0';
+    --pc_lcl                     := pc;
 
     if instr /= NOP then
       if xor_reduce(std_logic_vector(instr)) /= 'U' and xor_reduce(std_logic_vector(instr)) /= 'X' then
@@ -93,24 +116,33 @@ begin
 
         flags := Nflag & Zflag & Cflag & Vflag;
 
+		  if instr(15 downto 6) = "0100001101" then
+			multa <= std_logic_vector(rdata1);
+			multb <= std_logic_vector(rdata2);
+			--mult(std_logic_vector(rdata1), std_logic_vector(rdata2), multres);
+			
+		  end if;
+		  
         case instr(15 downto 13) is
           when "000" =>
-            alu(instr, flags, rdata1, rdata2, rdata3, wadr_lcl, wdata_lcl, rf_wr_lcl, flags);
+            alu(instr, flags, rdata1, rdata2, rdata3, wadr_lcl, wdata_lcl, rf_wr_lcl, flags, multres);
 
           when "001" =>                 -- Move/Compare/add/sub #Imm8
             alu_imm8(instr, flags, rdata1, rdata2, rdata3, wadr_lcl, wdata_lcl, rf_wr_lcl, flags);
 
           when "010" =>
             if instr(12) = '0' then
-              if instr(11 downto 10) = "00" then     -- ALU operations
-                alu(instr, flags, rdata1, rdata2, rdata3, wadr_lcl, wdata_lcl, rf_wr_lcl, flags);
-              elsif instr(11 downto 10) = "01" then  -- hi reg operations / branch exchange
-                hi_reg_bx(instr, flags, rdata1, rdata2, wadr_lcl, wdata_lcl, rf_wr_lcl, flags);
-              end if;
-
               if instr(11) = '1' then   -- PC-relative load.
                 pc_rel_load(instr, pc, rdata2, rdata3, dm_addr_lcl, dm_we_lcl, defer_lcl);
               end if;
+
+              if instr(11 downto 10) = "00" then     -- ALU operations
+                alu(instr, flags, rdata1, rdata2, rdata3, wadr_lcl, wdata_lcl, rf_wr_lcl, flags, multres);
+              elsif instr(11 downto 10) = "01" then  -- hi reg operations / branch exchange
+                hi_reg_bx(instr, flags, rdata1, rdata2, pc, wadr_lcl, wdata_lcl, rf_wr_lcl, flags);
+              end if;
+
+
             else
               if instr(9) = '0' then    -- Load/store register offset
                 load_store_offset(instr, rdata1, rdata2, rdata3, dm_addr_lcl, dm_we_lcl, dm_data_wr_lcl, defer_lcl);
@@ -140,10 +172,10 @@ begin
             elsif instr(12) = '1' then
 
 --misc_instr(instr, rdata1, rdata2, wadr_lcl, wdata_lcl, rf_wr_lcl, flags);
-              if instr(11 downto 10) = "00" then -- TODO: This is wrong....
+              if instr(11 downto 10) = "00" then  -- TODO: This is wrong....
                 if instr(8) = '1' then
                   -- CBNZ/CBZ
-                  take_branch := comp_branch(instr, rdata1, flags);
+                  --take_branch := comp_branch(instr, rdata1, flags);
 
                   if take_branch then
                     branch_tmp := resize(signed(instr(7 downto 3)), 11);
@@ -194,15 +226,15 @@ begin
       end if;
     end if;
 
-    wadr_tmp  <= wadr_lcl;
-    wdata_tmp <= wdata_lcl;
-    rf_wr_tmp <= rf_wr_lcl;
+    wadr  <= wadr_lcl;
+    wdata <= wdata_lcl;
+    rf_wr <= rf_wr_lcl;
 
-    dm_addr_tmp    <= dm_addr_lcl;
-    dm_data_wr_tmp <= dm_data_wr_lcl;
-    dm_we_tmp      <= dm_we_lcl;
+    dm_addr    <= dm_addr_lcl;
+    dm_data_wr <= dm_data_wr_lcl;
+    dm_we      <= dm_we_lcl;
 
-    defer_tmp <= defer_lcl;
+    defer_load <= defer_lcl;
 
     branch_value <= branch_tmp;
   end process;

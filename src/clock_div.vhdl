@@ -14,11 +14,12 @@ end clock_div;
 
 architecture clock_div of clock_div is
   signal counter : unsigned(31 downto 0) := (others => '0');
+  --signal halt_tmp : std_logic;
 begin
 
   process(rst, clk_in, halt, counter, clk_out)
   begin
-    if rst = '1' then
+    if rst then
       halt <= not(halt);
     end if;
 

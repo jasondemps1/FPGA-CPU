@@ -12,7 +12,7 @@ use work.helpers.all;
 package instr_set is
   type flags_bv is array(3 downto 0) of std_logic;  -- NZCV
   type instr_arr is array(15 downto 11) of std_logic;
-
+  
   -- Idea: Define all instructions we need to hook (extra func.) for store.
   -- Can't use first 5 bits of instruct. though.......
   --constant Store_Hooks : instr_arr := (
@@ -23,14 +23,26 @@ package instr_set is
 
   --  );
 
+--  component test_mult IS
+--      PORT
+--      (
+--              clock0          : IN STD_LOGIC  := '1';
+--              dataa           : IN STD_LOGIC_VECTOR (31 DOWNTO 0) :=  (OTHERS => '0');
+--              datab           : IN STD_LOGIC_VECTOR (31 DOWNTO 0) :=  (OTHERS => '0');
+--              overflow                : OUT STD_LOGIC ;
+--              result          : OUT STD_LOGIC_VECTOR (31 DOWNTO 0)
+--      );
+--      END component;
+
   function branch(
     instr : unsigned(15 downto 0);
     flags : flags_bv
     ) return boolean;                   -- Return: take branch or not.
 
   function comp_branch(
-    instr : unsigned(15 downto 0);
-    flags : flags_bv
+    instr  : unsigned(15 downto 0);
+    rdata1 : unsigned(31 downto 0);
+    flags  : flags_bv
     ) return boolean;                   -- Return: take branch or not.
 
   procedure alu(
@@ -40,7 +52,10 @@ package instr_set is
     wadr                   : out unsigned(3 downto 0);
     wdata                  : out unsigned(31 downto 0);
     wr_reg                 : out std_logic;
-    flags_out              : out flags_bv
+    flags_out              : out flags_bv;
+--	 multa : out std_logic_vector(31 downto 0);
+--	 multb : out std_logic_vector(31 downto 0);
+	 multres : std_logic_vector(31 downto 0)
     );
 
 
@@ -55,14 +70,14 @@ package instr_set is
     );
 
   procedure hi_reg_bx(
-    instr          :       unsigned(15 downto 0);
-    flags          :       flags_bv;
-    rdata1, rdata2 :       unsigned(31 downto 0);
-    pc             : inout unsigned(31 downto 1);
-    wadr           : out   unsigned(3 downto 0);
-    wdata          : out   unsigned(31 downto 0);
-    wr_reg         : out   std_logic;
-    flags_out      : out   flags_bv
+    instr          :     unsigned(15 downto 0);
+    flags          :     flags_bv;
+    rdata1, rdata2 :     unsigned(31 downto 0);
+    pc             : in  unsigned(31 downto 1);
+    wadr           : out unsigned(3 downto 0);
+    wdata          : out unsigned(31 downto 0);
+    wr_reg         : out std_logic;
+    flags_out      : out flags_bv
     );
 
   procedure pc_rel_load(
@@ -213,7 +228,7 @@ package body instr_set is
     ) return boolean is
 
   begin
-    if (instr(11) = '1') xor (rdata1 = '0') then
+    if (instr(11) = '1') xor (rdata1 = (others => '0')) then
       return true;
     else
       return false;
@@ -229,33 +244,36 @@ package body instr_set is
     wadr                   : out unsigned(3 downto 0);
     wdata                  : out unsigned(31 downto 0);
     wr_reg                 : out std_logic;
-    flags_out              : out flags_bv
+    flags_out              : out flags_bv;
+--	 multa : out std_logic_vector(31 downto 0);
+--	 multb : out std_logic_vector(31 downto 0);
+	 multres : std_logic_vector(31 downto 0)
     ) is
 
     variable res        : unsigned(32 downto 0);
-    variable apply_val  : std_logic := '1';     -- do we apply the value?
-    variable flags_mask : flags_bv  := "1111";  -- NZCV
+    variable apply_val  : std_logic := '1';  -- do we apply the value?
+    variable flags_mask : flags_bv  := "1111";              -- NZCV
   begin
     if instr(15 downto 13) = "000" then
       case instr(12 downto 11) is
-        when "00" =>                            -- MOV / LSL #Imm
+        when "00" =>                    -- MOV / LSL #Imm
           res        := resize(rdata2 sll to_integer(instr(10 downto 6)), 33);
           flags_mask := "1100";
-        when "01" =>                            -- LSR #Imm
+        when "01" =>                    -- LSR #Imm
           res        := resize(rdata2 srl to_integer(instr(10 downto 6)), 33);
           flags_mask := "1110";
-        when "10" =>                            --ASR #Imm
+        when "10" =>                    --ASR #Imm
           res        := resize(unsigned(signed(rdata2) srl to_integer(instr(10 downto 6))), 33);
           flags_mask := "1110";
-        when "11" =>                            -- ADD/SUB
+        when "11" =>                    -- ADD/SUB
           case instr(10 downto 9) is
-            when "00" =>                        -- Add (Reg)
+            when "00" =>                -- Add (Reg)
               res := resize(rdata2 + rdata3, 33);
-            when "01" =>                        -- Sub (Reg)
+            when "01" =>                -- Sub (Reg)
               res := resize(rdata2 - rdata3, 33);
-            when "10" =>                        -- Add #Imm3
+            when "10" =>                -- Add #Imm3
               res := resize(rdata2 + instr(8 downto 6), 33);
-            when "11" =>                        -- Sub #Imm3
+            when "11" =>                -- Sub #Imm3
               res := resize(rdata2 - instr(8 downto 6), 33);
             when others =>
               res := (others => 'U');
@@ -265,50 +283,53 @@ package body instr_set is
       end case;
     else
       case instr(10 downto 6) is
-        when "00000" =>                         -- AND
+        when "00000" =>                 -- AND
           res        := resize(rdata1 and rdata2, 33);
           flags_mask := "1110";
-        when "00001" =>                         -- EOR
+        when "00001" =>                 -- EOR
           res        := resize(rdata1 xor rdata2, 33);
           flags_mask := "1110";
-        when "00010" =>                         -- LSL
+        when "00010" =>                 -- LSL
           res        := resize(rdata1 sll to_integer(rdata2 and resize(X"1F", rdata2'length)), 33);
           flags_mask := "1110";
-        when "00011" =>                         -- LSR
+        when "00011" =>                 -- LSR
           res        := resize(rdata1 srl to_integer(rdata2 and resize(X"1F", rdata2'length)), 33);
           flags_mask := "1110";
-        when "00100" =>                         -- ASR
+        when "00100" =>                 -- ASR
           res        := resize(unsigned(signed(rdata1) srl to_integer(rdata2 and resize(X"1F", rdata2'length))), 33);
           flags_mask := "1110";
-        when "00101" =>                         -- ADC
+        when "00101" =>                 -- ADC
           res := resize(rdata1 + ("0" & flags(2)), 33);
-        when "00110" =>                         -- SBC
+        when "00110" =>                 -- SBC
           res := resize(rdata1 - (rdata2 - not ("0" & flags(2))), 33);
-        when "00111" =>                         -- ROR
+        when "00111" =>                 -- ROR
           res        := resize(rdata1 ror to_integer(rdata2 and resize(X"1F", rdata2'length)), 33);
           flags_mask := "1110";
-        when "01000" =>                         -- TST
+        when "01000" =>                 -- TST
           apply_val  := '0';
           res        := resize(rdata1 and rdata2, 33);
           flags_mask := "1110";
-        when "01001" =>                         -- RSB/NEG
+        when "01001" =>                 -- RSB/NEG
           res := resize(unsigned(std_logic_vector(-signed(rdata2))), 33);
-        when "01010" =>                         -- CMP
+        when "01010" =>                 -- CMP
           apply_val := '0';
           res       := resize(rdata1 - rdata2, 33);
-        when "01011" =>                         -- CMN
+        when "01011" =>                 -- CMN
           apply_val := '0';
           res       := resize(rdata1 + rdata2, 33);
-        when "01100" =>                         -- ORR
+        when "01100" =>                 -- ORR
           res        := resize(rdata1 or rdata2, 33);
           flags_mask := "1110";
-        when "01101" =>                         -- MUL
-          res        := resize(rdata1 * rdata2, 33);
+        when "01101" =>                 -- MUL
+		    --multa := std_logic_vector(rdata1);
+			 --multb := std_logic_vector(rdata2);
+			 --res := unsigned(multres);
+          res := "0" & unsigned(multres); --"0" & resize(rdata1 * rdata2, 32);  --resize(rdata1 * rdata2, 33);
           flags_mask := "1100";
-        when "01110" =>                         -- BIC
+        when "01110" =>                 -- BIC
           res        := resize(rdata1 and not rdata2, 33);
           flags_mask := "1110";
-        when "01111" =>                         -- MVN
+        when "01111" =>                 -- MVN
           res        := resize(unsigned(std_logic_vector(-signed(rdata2))), 33);
           flags_mask := "1110";
         when others =>
@@ -589,14 +610,14 @@ package body instr_set is
   end offset_sp_sign;
 
   procedure hi_reg_bx(
-    instr          :       unsigned(15 downto 0);
-    flags          :       flags_bv;
-    rdata1, rdata2 :       unsigned(31 downto 0);
-    pc             : inout unsigned(31 downto 1);
-    wadr           : out   unsigned(3 downto 0);
-    wdata          : out   unsigned(31 downto 0);
-    wr_reg         : out   std_logic;
-    flags_out      : out   flags_bv
+    instr          :     unsigned(15 downto 0);
+    flags          :     flags_bv;
+    rdata1, rdata2 :     unsigned(31 downto 0);
+    pc             : in  unsigned(31 downto 1);
+    wadr           : out unsigned(3 downto 0);
+    wdata          : out unsigned(31 downto 0);
+    wr_reg         : out std_logic;
+    flags_out      : out flags_bv
     ) is
 
     variable flags_mask : flags_bv := "1111";
@@ -610,8 +631,8 @@ package body instr_set is
       when "01" =>                      -- CMP
         flags_out := flags_set(resize(rdata1 - rdata2, 33), flags_mask);
       when "11" =>                      -- BX
-        pc := rdata1;                   -- TODO: Add take_branch here
-        branch(instr, flags_out);
+      --pc := rdata1;                   -- TODO: Add take_branch here
+      --branch(instr, flags_out);
       when others =>
         report "Invalid condition code in High Register instruction" severity error;
     end case;
@@ -631,42 +652,43 @@ package body instr_set is
     if instr(10) = '0' then
       -- REVXX Can probably go here also...?
 
-      offset_sp_sign(instr, rdata1, rdata2, wadr, wdata, rf_reg, flags);
+    --offset_sp_sign(instr, rdata1, rdata2, wadr, wdata, rf_reg, flags);
     else                                -- 10 = '1'
       -- Push, pop, ITE, CPS, etc. goes here.....somewhere.
-      case (instr(9 downto 8)) is
+      --case (instr(9 downto 8)) is
 
-      end case;
+    end if;
+    --end case;
 
-    end misc_instr;
-
-
-    function flags_set(
-      value : unsigned(32 downto 0);
-      mask  : flags_bv                  -- NZCV update bits
-      ) return flags_bv is
-
-      variable flags : flags_bv;
-    begin
-      flags(0) := value(31);            -- Neg
-      flags(2) := value(32);            -- Carry
-
-      -- Check Zero
-      if or_reduce(std_logic_vector(value)) = '0' then
-        flags(1) := '1';
-        flags(3) := value(32) xor '1';
-      else
-        flags(1) := '0';
-        flags(3) := value(32) xor '0';
-      end if;
-
-      return
-        (flags(3) and mask(3)) &
-        (flags(2) and mask(2)) &
-        (flags(1) and mask(1)) &
-        (flags(0) and mask(0));
+  end misc_instr;
 
 
-    end flags_set;
+  function flags_set(
+    value : unsigned(32 downto 0);
+    mask  : flags_bv                    -- NZCV update bits
+    ) return flags_bv is
 
-  end instr_set;
+    variable flags : flags_bv;
+  begin
+    flags(0) := value(31);              -- Neg
+    flags(2) := value(32);              -- Carry
+
+    -- Check Zero
+    if or_reduce(std_logic_vector(value)) = '0' then
+      flags(1) := '1';
+      flags(3) := value(32) xor '1';
+    else
+      flags(1) := '0';
+      flags(3) := value(32) xor '0';
+    end if;
+
+    return
+      (flags(3) and mask(3)) &
+      (flags(2) and mask(2)) &
+      (flags(1) and mask(1)) &
+      (flags(0) and mask(0));
+
+
+  end flags_set;
+
+end instr_set;
