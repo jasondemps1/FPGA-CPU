@@ -52,7 +52,7 @@ architecture Execute of Execute is
   attribute multstyle of Execute : architecture is "dsp";
 begin
 
-  mult : comb_mult port map (multa, multb, multres);
+  --mult : comb_mult port map (multa, multb, multres);
 
   --wadr <= wadr_tmp;
 
