@@ -327,60 +327,60 @@ package body instr_set is
         res        := resize(unsigned(signed(rdata2) srl to_integer(instr(10 downto 6))), 33);
         flags_mask := "1110";
       when "0001100---" =>  -- Add (Reg)
-        reg := resize(rdata2 + rdata3, 33);
+        res := resize(rdata2 + rdata3, 33);
       when "0001101---" =>  -- Sub (Reg)
-        reg := resize(rdata2 - rdata3, 33);
+        res := resize(rdata2 - rdata3, 33);
       when "0001110---" =>  -- Add #Imm3
-        reg := resize(rdata2 + instr(8 downto 6), 33);
+        res := resize(rdata2 + instr(8 downto 6), 33);
       when "0001111---" =>  -- Sub #Imm3
-        reg := resize(rdata2 - instr(8 downto 6), 33);
-      when "-----00000" => -- AND
+        res := resize(rdata2 - instr(8 downto 6), 33);
+      when "0100000000" => -- AND
         res        := resize(rdata1 and rdata2, 33);
         flags_mask := "1110";
-      when "-----00001" =>                   -- EOR
+      when "0100000001" =>                   -- EOR
         res        := resize(rdata1 xor rdata2, 33);
         flags_mask := "1110";
-      when "-----00010" =>                   -- LSL
+      when "0100000010" =>                   -- LSL
         res        := resize(rdata1 sll to_integer(rdata2 and resize(X"1F", rdata2'length)), 33);
         flags_mask := "1110";
-      when "-----00011" =>                   -- LSR
+      when "0100000011" =>                   -- LSR
         res        := resize(rdata1 srl to_integer(rdata2 and resize(X"1F", rdata2'length)), 33);
         flags_mask := "1110";
-      when "-----00100" =>                   -- ASR
+      when "0100000100" =>                   -- ASR
         res        := resize(unsigned(signed(rdata1) srl to_integer(rdata2 and resize(X"1F", rdata2'length))), 33);
         flags_mask := "1110";
-      when "-----00101" =>                   -- ADC
+      when "0100000101" =>                   -- ADC
         res := resize(rdata1 + ("0" & flags(2)), 33);
-      when "-----00110" =>                   -- SBC
+      when "0100000110" =>                   -- SBC
         res := resize(rdata1 - (rdata2 - not ("0" & flags(2))), 33);
-      when "-----00111" =>                   -- ROR
+      when "0100000111" =>                   -- ROR
         res        := resize(rdata1 ror to_integer(rdata2 and resize(X"1F", rdata2'length)), 33);
         flags_mask := "1110";
-      when "-----01000" =>                   -- TST
+      when "0100001000" =>                   -- TST
         apply_val  := '0';
         res        := resize(rdata1 and rdata2, 33);
         flags_mask := "1110";
-      when "-----01001" =>                   -- RSB/NEG
+      when "0100001001" =>                   -- RSB/NEG
         res := resize(unsigned(std_logic_vector(-signed(rdata2))), 33);
-      when "-----01010" =>                   -- CMP
+      when "0100001010" =>                   -- CMP
         apply_val := '0';
         res       := resize(rdata1 - rdata2, 33);
-      when "-----01011" =>                   -- CMN
+      when "0100001011" =>                   -- CMN
         apply_val := '0';
         res       := resize(rdata1 + rdata2, 33);
-      when "-----01100" =>                   -- ORR
+      when "0100001100" =>                   -- ORR
         res        := resize(rdata1 or rdata2, 33);
         flags_mask := "1110";
-      when "-----01101" =>                   -- MUL
+      when "0100001101" =>                   -- MUL
         --multa := std_logic_vector(rdata1);
         --multb := std_logic_vector(rdata2);
         --res := unsigned(multres);
-        res        := "0" & unsigned(multres);  --"0" & resize(rdata1 * rdata2, 32);  --resize(rdata1 * rdata2, 33);
+        res        := resize(rdata1 * rdata2, 33); --"0" & unsigned(multres);  --"0" & resize(rdata1 * rdata2, 32);  --resize(rdata1 * rdata2, 33);
         flags_mask := "1100";
-      when "-----01110" =>                   -- BIC
+      when "0100001110" =>                   -- BIC
         res        := resize(rdata1 and not rdata2, 33);
         flags_mask := "1110";
-      when "-----01111" =>                   -- MVN
+      when "0100001111" =>                   -- MVN
         res        := resize(unsigned(std_logic_vector(-signed(rdata2))), 33);
         flags_mask := "1110";
       when others =>
@@ -614,43 +614,67 @@ package body instr_set is
     variable res        : unsigned(32 downto 0);
     variable flags_mask : flags_bv := "0000";
   begin
-
-    --if instr(12 downto 11) = "10" then
-    case instr(12 downto 11) is
-      when "10" =>
-        case instr(9 downto 8) is
-          when "00" =>
-            wadr   := SP;
-            wr_reg := '1';
-
-            if instr(7) = '0' then      -- ADD (SP + #Imm7)
-              res        := resize(SP + (instr(6 downto 0) & resize("0", 25)), 33);
-              flags_mask := "1111";
-            else                        -- SUB (SP - #Imm)
-              res        := resize(SP - (instr(6 downto 0) & resize("0", 25)), 33);
-              flags_mask := "1111";
-            end if;
-
-          when "10" =>                  -- Sign extension
-            case instr(7 downto 6) is
-              when "00" =>              -- SXTH
-                res := unsigned(resize(signed(rdata2 and resize(X"FFFF", rdata2'length)), 33));
-              when "01" =>              -- SXTB
-                res := unsigned(resize(signed(rdata2 and resize(X"FF", rdata2'length)), 33));
-              when "10" =>              -- UXTH
-                res := resize(rdata2 and resize(X"FFFF", rdata2'length), 33);
-              when "11" =>              -- UXTB
-                res := resize(rdata2 and resize(X"FFFF", rdata2'length), 33);
-              when others =>
-                res := (others => 'U');
-            end case;
-
-          when others =>
-            res := (others => 'U');
-        end case;
-      when others =>
-        res := (others => 'U');
-    end case;
+	if instr(12 downto 11) = "10" then
+		if instr(9 downto 7) = "000" then
+			wadr   := SP;
+         wr_reg := '1';
+			res        := resize(SP + (instr(6 downto 0) & resize("0", 25)), 33);
+         flags_mask := "1111";
+		elsif instr(9 downto 7) = "001" then
+			wadr   := SP;
+         wr_reg := '1';
+			res        := resize(SP - (instr(6 downto 0) & resize("0", 25)), 33);
+         flags_mask := "1111";
+		elsif instr(9 downto 6) = "1000" then -- SXTH
+			res := unsigned(resize(signed(rdata2 and resize(X"FFFF", rdata2'length)), 33));
+      elsif instr(9 downto 6) = "1001" then             -- SXTB
+		 res := unsigned(resize(signed(rdata2 and resize(X"FF", rdata2'length)), 33));
+	  elsif instr(9 downto 6) = "1010"  then            -- UXTH
+		 res := resize(rdata2 and resize(X"FFFF", rdata2'length), 33);
+	  elsif instr(9 downto 6) = "1011" then -- UXTB
+		 res := resize(rdata2 and resize(X"FFFF", rdata2'length), 33);
+		else
+			res := (others => 'U');
+		end if;
+	else
+		res := (others => 'U');
+	end if;
+  
+--    case instr(12 downto 11) is
+--      when "10" =>
+--        case instr(9 downto 8) is
+--          when "00" =>
+--            wadr   := SP;
+--            wr_reg := '1';
+--
+--            if instr(7) = '0' then      -- ADD (SP + #Imm7)
+--              res        := resize(SP + (instr(6 downto 0) & resize("0", 25)), 33);
+--              flags_mask := "1111";
+--            else                        -- SUB (SP - #Imm)
+--              res        := resize(SP - (instr(6 downto 0) & resize("0", 25)), 33);
+--              flags_mask := "1111";
+--            end if;
+--
+--          when "10" =>                  -- Sign extension
+--            case instr(7 downto 6) is
+--              when "00" =>              -- SXTH
+--                res := unsigned(resize(signed(rdata2 and resize(X"FFFF", rdata2'length)), 33));
+--              when "01" =>              -- SXTB
+--                res := unsigned(resize(signed(rdata2 and resize(X"FF", rdata2'length)), 33));
+--              when "10" =>              -- UXTH
+--                res := resize(rdata2 and resize(X"FFFF", rdata2'length), 33);
+--              when "11" =>              -- UXTB
+--                res := resize(rdata2 and resize(X"FFFF", rdata2'length), 33);
+--              when others =>
+--                res := (others => 'U');
+--            end case;
+--
+--          when others =>
+--            res := (others => 'U');
+--        end case;
+--      when others =>
+--        res := (others => 'U');
+--    end case;
     --else
     --  res := (others => 'U');
     --end if;
