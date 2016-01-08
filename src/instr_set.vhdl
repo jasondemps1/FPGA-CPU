@@ -31,10 +31,7 @@ package instr_set is
     wadr                   : out unsigned(3 downto 0);
     wdata                  : out unsigned(31 downto 0);
     wr_reg                 : out std_logic;
-    flags_out              : out flags_bv;
---       multa : out std_logic_vector(31 downto 0);
---       multb : out std_logic_vector(31 downto 0);
-    multres                :     std_logic_vector(31 downto 0)
+    flags_out              : out flags_bv
     );
 
 
@@ -207,7 +204,7 @@ package body instr_set is
     ) return boolean is
 
   begin
-    if (instr(11) = '1') xor (rdata1 = (others => '0')) then
+    if (instr(11) = '1') xor (rdata1 = resize("0", 32)) then
       return true;
     else
       return false;
@@ -223,10 +220,7 @@ package body instr_set is
     wadr                   : out unsigned(3 downto 0);
     wdata                  : out unsigned(31 downto 0);
     wr_reg                 : out std_logic;
-    flags_out              : out flags_bv;
---       multa : out std_logic_vector(31 downto 0);
---       multb : out std_logic_vector(31 downto 0);
-    multres                :     std_logic_vector(31 downto 0)
+    flags_out              : out flags_bv
     ) is
 
     variable res        : unsigned(32 downto 0);
@@ -372,10 +366,7 @@ package body instr_set is
         res        := resize(rdata1 or rdata2, 33);
         flags_mask := "1110";
       when "0100001101" =>                   -- MUL
-        --multa := std_logic_vector(rdata1);
-        --multb := std_logic_vector(rdata2);
-        --res := unsigned(multres);
-        res        := resize(rdata1 * rdata2, 33); --"0" & unsigned(multres);  --"0" & resize(rdata1 * rdata2, 32);  --resize(rdata1 * rdata2, 33);
+        res        := resize(rdata1 * rdata2, 33);
         flags_mask := "1100";
       when "0100001110" =>                   -- BIC
         res        := resize(rdata1 and not rdata2, 33);
@@ -528,10 +519,10 @@ package body instr_set is
       when "00" =>                      -- STR
         dm_addr := resize(rdata2 + (imm5 & "0"), 30);
         dm_we   := '1';
+		  dm_data_wr := rdata1;
+		  
         if instr(15 downto 13) = "100" then  -- STRH
           dm_data_wr := rdata1 and resize(X"FFFF", rdata1'length);
-        else
-          dm_data_wr := rdata1;
         end if;
       when "01" =>  -- LDR | LDRB (Handle on Store [Also halfword!])
         dm_addr := resize(rdata2 + (imm5 & "0"), 30);
