@@ -39,6 +39,8 @@ Description
 * 1024, 16-bit, ROM locations.
 * 512, 32-bit, RAM locations.
 
+* The pipeline currently meets all timing constraints under a 50 MHz clock. More work will be done to increase this number.
+
 Going Forward
 -------------
 * Finish instruction set implementation.
