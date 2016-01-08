@@ -25,15 +25,15 @@ entity Execute is
 end Execute;
 
 architecture Execute of Execute is
-  component comb_mult IS
-	PORT
-	(
-		dataa		: IN STD_LOGIC_VECTOR (31 DOWNTO 0);
-		datab		: IN STD_LOGIC_VECTOR (31 DOWNTO 0);
-		result		: OUT STD_LOGIC_VECTOR (31 DOWNTO 0)
-	);
-  END component;
-  
+  component comb_mult is
+    port
+      (
+        dataa  : in  std_logic_vector (31 downto 0);
+        datab  : in  std_logic_vector (31 downto 0);
+        result : out std_logic_vector (31 downto 0)
+        );
+  end component;
+
   signal Ztmp, Ctmp, Vtmp, Ntmp : std_logic;
 
   signal wadr_tmp       : unsigned(3 downto 0);
@@ -43,16 +43,16 @@ architecture Execute of Execute is
   signal dm_data_wr_tmp : unsigned(31 downto 0);
   signal dm_we_tmp      : std_logic;
   signal defer_tmp      : std_logic;
-  
-  signal multa : std_logic_vector(31 downto 0);
-  signal multb : std_logic_vector(31 downto 0);
+
+  signal multa   : std_logic_vector(31 downto 0);
+  signal multb   : std_logic_vector(31 downto 0);
   signal multres : std_logic_vector(31 downto 0);
 
   attribute multstyle            : string;
   attribute multstyle of Execute : architecture is "dsp";
 begin
 
-	mult : comb_mult port map (multa, multb, multres);
+  mult : comb_mult port map (multa, multb, multres);
 
   --wadr <= wadr_tmp;
 
@@ -65,7 +65,7 @@ begin
 
   --defer_load <= defer_tmp;
 
-  process (instr, rdata1, rdata2, rdata3, pc, Nflag, Zflag, Cflag, Vflag)
+  process (instr, rdata1, rdata2, rdata3, pc, Nflag, Zflag, Cflag, Vflag, multres)
     variable condition   : unsigned(3 downto 0);
     variable take_branch : boolean;
     variable sum         : unsigned(32 downto 0);
@@ -105,6 +105,8 @@ begin
     dm_data_wr_lcl := (others => '0');
     dm_we_lcl      := '0';
     defer_lcl      := '0';
+    multa          <= (others => '0');
+    multb          <= (others => '0');
     --pc_lcl                     := pc;
 
     if instr /= NOP then
@@ -116,13 +118,11 @@ begin
 
         flags := Nflag & Zflag & Cflag & Vflag;
 
-		  if instr(15 downto 6) = "0100001101" then
-			multa <= std_logic_vector(rdata1);
-			multb <= std_logic_vector(rdata2);
-			--mult(std_logic_vector(rdata1), std_logic_vector(rdata2), multres);
-			
-		  end if;
-		  
+        if instr(15 downto 6) = "0100001101" then
+          multa <= std_logic_vector(rdata1);
+          multb <= std_logic_vector(rdata2);
+        end if;
+
         case instr(15 downto 13) is
           when "000" =>
             alu(instr, flags, rdata1, rdata2, rdata3, wadr_lcl, wdata_lcl, rf_wr_lcl, flags, multres);
