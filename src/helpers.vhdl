@@ -6,7 +6,7 @@ package helpers is
   constant NOP     : unsigned(15 downto 0) := x"EF00";
   constant reg_len : natural               := 4;
 
-  type lookup_t is array(natural range <> downto 0) of unsigned(10 downto 2);
+  type lookup_t is array(integer range <>) of integer range 0 to 512; --unsigned(10 downto 2);
 
   -- Special Registers
   constant SP : unsigned(3 downto 0) := "1101";
